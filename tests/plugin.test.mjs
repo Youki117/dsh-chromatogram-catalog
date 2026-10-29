@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startPlugin } from '../index.js';
+import { readFileSync } from 'node:fs';
+import { Engine } from '../lib/runtime.js';
 import { isNewer, versionParts, readRelease, releaseAsset } from '../lib/releases.js';
 
 const repository = 'Youki117/dsh-chromatogram-catalog';
+const currentVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version;
 const release = version => ({ tag_name: `v${version}`, body: '修复导出及中文路径', draft: false, prerelease: false,
   assets: [{ name: `dsh-chromatogram-catalog-${version}.tgz`, browser_download_url: `https://github.com/${repository}/releases/download/v${version}/dsh-chromatogram-catalog-${version}.tgz` }] });
 const engine = busy => ({ phase: '本地服务运行中', ensure: async () => 'http://127.0.0.1:12345/test/', busy: async () => busy, dispose() {} });
@@ -70,6 +73,16 @@ test('忙碌任务与安装失败均不会报告更新成功', async t => {
     assert.match((await response.json()).error, busy ? /仍在处理/ : /下载失败/);
     assert.equal(called, !busy);
     assert.equal(plugin.state.updating, false);
-    assert.equal(plugin.state.version, '0.1.0');
+    assert.equal(plugin.state.version, currentVersion);
   }
+});
+
+test('组件启动失败显示原因，下一次可重试', async () => {
+  const runtime = new Engine({ directory: '.', repository, version: '0.1.0' });
+  let tries = 0;
+  runtime.start = async () => { if (++tries === 1) throw new Error('连接中断'); return 'http://127.0.0.1/test/'; };
+  await assert.rejects(runtime.ensure(), /连接中断/);
+  assert.match(runtime.phase, /启动失败.*连接中断/);
+  assert.equal(await runtime.ensure(), 'http://127.0.0.1/test/');
+  assert.equal(tries, 2);
 });

@@ -61,15 +61,18 @@ export async function startPlugin({ install, directory, fetcher = fetch, engine:
       }
       if (request.method === 'POST' && route === 'update') {
         if (state.updating) throw new Error('更新正在进行，请稍候');
+        if (state.updateMessage) throw new Error('新版已安装，请先重启 DSH');
         if (!state.available) throw new Error('没有可安装的新版本，请先检查更新');
+        const target = state.available;
         state.updating = true;
         try {
           if (await engine.busy()) throw new Error('图谱任务仍在处理，请等处理完成后更新');
-          const result = await install(state.available.url);
+          const result = await install(target.url);
           if (!['applied', 'restart-required'].includes(result.application) || !result.changed) {
             throw new Error(result.error?.message ?? 'DSH 没有成功安装更新，当前版本继续可用');
           }
           state.updateMessage = '新版已安装，请重启 DSH 后使用';
+          state.available = null;
           return reply(200, { ok: true, message: state.updateMessage });
         } finally { state.updating = false; }
       }
