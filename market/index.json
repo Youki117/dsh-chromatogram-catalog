@@ -1,0 +1,53 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Chromatogram Catalog",
+    "zh": "典型图谱整理"
+  },
+  "description": {
+    "en": "Local chromatogram review and document export for DSH.",
+    "zh": "在 DSH 内整理图谱、复核目录并导出 PDF 与 Word。"
+  },
+  "plugins": [
+    {
+      "name": "dsh-chromatogram-catalog",
+      "title": {
+        "en": "Chromatogram Catalog",
+        "zh": "典型图谱整理"
+      },
+      "description": {
+        "en": "Import PDFs, review chromatograms and export PDF/Word. Checks GitHub updates on startup. Windows x64.",
+        "zh": "导入 PDF、整理典型图谱、人工复核并导出 PDF/Word；启动检查 GitHub 新版。支持 Windows x64。"
+      },
+      "icon": "https://raw.githubusercontent.com/Youki117/dsh-chromatogram-catalog/main/icon.svg",
+      "author": "Youki117",
+      "homepage": "https://github.com/Youki117/dsh-chromatogram-catalog#readme",
+      "repository": {
+        "url": "https://github.com/Youki117/dsh-chromatogram-catalog"
+      },
+      "metadata": {
+        "keywords": [
+          "图谱",
+          "典型图谱整理",
+          "chromatogram",
+          "PDF",
+          "Word"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.1.2",
+          "publishTimestamp": 1793239152,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Youki117/dsh-chromatogram-catalog.git",
+            "commit": "7010b16ba83a819bb438c1e1877b0b427fd87bdc"
+          },
+          "engines": {
+            "dsh": ">=0.2.1-rc.2 <0.3.0"
+          }
+        }
+      ]
+    }
+  ]
+}
