@@ -1,0 +1,20 @@
+{
+  "name": "dsh-chromatogram-catalog",
+  "version": "0.1.0",
+  "description": "在 DeepSeek Harness 内整理典型图谱、复核目录并导出 PDF 和 Word；启动时检查 GitHub 更新。",
+  "type": "module",
+  "main": "index.js",
+  "exports": { ".": "./index.js", "./client": "./client.js", "./package.json": "./package.json" },
+  "files": ["index.js", "client.js", "lib", "web", "cordis.patch.yml", "README.md", "NOTICE.md", "icon.svg"],
+  "engines": { "node": ">=22", "dsh": ">=0.2.1-rc.2 <0.3.0" },
+  "repository": { "type": "git", "url": "https://github.com/Youki117/dsh-chromatogram-catalog" },
+  "homepage": "https://github.com/Youki117/dsh-chromatogram-catalog#readme",
+  "keywords": ["dsh-plugin", "chromatogram", "图谱", "目录", "PDF"],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-ui-layout", "@deepseek-ai/dsh-client-ui-sidebar"] }
+  },
+  "catalog": { "repository": "Youki117/dsh-chromatogram-catalog", "engineVersion": "0.1.0" },
+  "scripts": { "test": "node --test tests/*.test.mjs", "pack:release": "npm pack --pack-destination dist" },
+  "license": "UNLICENSED"
+}
