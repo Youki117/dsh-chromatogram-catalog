@@ -1,16 +1,17 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { mkdir, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { Engine } from './lib/runtime.js';
-import { readRelease, releaseAsset, isNewer } from './lib/releases.js';
+import { readRelease, releaseAsset, isNewer, downloadAsset } from './lib/releases.js';
 
 const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 export const name = 'chromatogram-catalog';
 export const inject = ['pluginManager'];
 
-export async function startPlugin({ install, directory, fetcher = fetch, engine: providedEngine }) {
+export async function startPlugin({ install, directory, fetcher = fetch, download = downloadAsset, engine: providedEngine }) {
   const repository = manifest.catalog.repository;
   const engine = providedEngine ?? new Engine({ directory, repository, version: manifest.catalog.engineVersion });
   const token = randomBytes(24).toString('hex');
@@ -27,7 +28,7 @@ export async function startPlugin({ install, directory, fetcher = fetch, engine:
         const version = release.tag_name.replace(/^v/, '');
         state.available = isNewer(version, manifest.version) ? {
           version, notes: String(release.body ?? '').slice(0, 12000),
-          url: releaseAsset(release, repository, `${manifest.name}-${version}.tgz`).browser_download_url,
+          asset: releaseAsset(release, repository, `${manifest.name}-${version}.tgz`),
         } : null;
         state.checkError = null;
       } catch (error) {
@@ -65,15 +66,23 @@ export async function startPlugin({ install, directory, fetcher = fetch, engine:
         if (!state.available) throw new Error('没有可安装的新版本，请先检查更新');
         const target = state.available;
         state.updating = true;
+        let archive;
         try {
           if (await engine.busy()) throw new Error('图谱任务仍在处理，请等处理完成后更新');
-          const result = await install(target.url);
+          const cache = join(directory, 'updates');
+          await mkdir(cache, { recursive: true });
+          archive = join(cache, `${manifest.name}-${target.version}-${randomBytes(6).toString('hex')}.tgz`);
+          await download(target.asset, archive);
+          const result = await install(archive);
           if (!['applied', 'restart-required'].includes(result.application) || !result.changed) {
             throw new Error(result.error?.message ?? 'DSH 没有成功安装更新，当前版本继续可用');
           }
           state.updateMessage = '新版已安装，请重启 DSH 后使用';
           state.available = null;
           return reply(200, { ok: true, message: state.updateMessage });
+        } catch (error) {
+          if (archive) await rm(archive, { force: true });
+          throw error;
         } finally { state.updating = false; }
       }
       return reply(404, { error: 'Not found' });

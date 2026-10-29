@@ -12,7 +12,7 @@ DSH 的「插件」页面中选择安装插件，输入：
 https://github.com/Youki117/dsh-chromatogram-catalog/releases/latest/download/dsh-chromatogram-catalog.tgz
 ```
 
-安装后重启 DSH，在侧栏选择「典型图谱整理」。首次运行会下载并解压 OCR 运行组件，需要保持网络连接。
+安装后重启 DSH，在侧栏选择「典型图谱整理」。首次运行会下载约 159 MiB 的识别组件，并显示下载进度，需要保持网络连接。下载采用 GitHub 文件 API 和分段传输；失败时可点击「重新打开」重试。
 
 使用 DSH Web 版时，也可通过 CLI 安装到 Web 配置：
 
@@ -34,7 +34,7 @@ https://raw.githubusercontent.com/Youki117/dsh-chromatogram-catalog/main/market/
 
 每次启动 DSH 且插件已启用时，插件会在后台检查 GitHub 最新正式 Release。有新版会弹出提醒，并在工作台顶部显示版本和更新说明。
 
-点击「更新至…」并确认后，由 DSH 自带插件管理器安装新版，完成后重启 DSH。正在处理图谱时会阻止更新。检查失败会显示原因，不阻止使用当前版本；也可手动点击「检查更新」。
+点击「更新至…」并确认后，插件先下载新版安装包，再交给 DSH 自带插件管理器安装，完成后重启 DSH。正在处理图谱或下载组件时会阻止更新。检查失败会显示原因，不阻止使用当前版本；也可手动点击「检查更新」。
 
 版本以正式 Release 为准。仅提交仓库代码不会触发更新。
 
@@ -51,3 +51,5 @@ https://raw.githubusercontent.com/Youki117/dsh-chromatogram-catalog/main/market/
 `scripts/build_engine.py` 将现有 Windows 运行时、最新任务/界面模块与脱敏模板封装成版本化组件，输出到 `dist/`。业务模块编译为 Python 3.11 字节码；这不提供防逆向保证。
 
 每个正式 Release 包含版本化插件 tgz、固定名称 `dsh-chromatogram-catalog.tgz` 和 `catalog-engine-win32-x64-<engineVersion>.zip`。后续如仅修改插件界面或更新逻辑，可保留 `engineVersion`，复用之前发布的识别组件。
+
+发布时同步更新 `market/index.json` 的版本、发布时间及源代码提交号，应用内市场才会显示新版本。该索引是自建市场源，尚未收录到 DSH 默认市场。

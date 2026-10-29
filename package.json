@@ -1,6 +1,6 @@
 {
   "name": "dsh-chromatogram-catalog",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "在 DeepSeek Harness 内整理典型图谱、复核目录并导出 PDF 和 Word；启动时检查 GitHub 更新。",
   "type": "module",
   "main": "index.js",

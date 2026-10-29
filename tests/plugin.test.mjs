@@ -1,12 +1,19 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startPlugin } from '../index.js';
 import { readFileSync } from 'node:fs';
 import { Engine } from '../lib/runtime.js';
-import { isNewer, versionParts, readRelease, releaseAsset } from '../lib/releases.js';
+import { createServer } from 'node:http';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { isNewer, versionParts, readRelease, releaseAsset, downloadAsset } from '../lib/releases.js';
 
 const repository = 'Youki117/dsh-chromatogram-catalog';
 const currentVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))).version;
+const sandbox = await mkdtemp(join(tmpdir(), 'catalog-plugin-test-'));
+after(() => rm(sandbox, { recursive: true, force: true }));
 const release = version => ({ tag_name: `v${version}`, body: '修复导出及中文路径', draft: false, prerelease: false,
   assets: [{ name: `dsh-chromatogram-catalog-${version}.tgz`, browser_download_url: `https://github.com/${repository}/releases/download/v${version}/dsh-chromatogram-catalog-${version}.tgz` }] });
 const engine = busy => ({ phase: '本地服务运行中', ensure: async () => 'http://127.0.0.1:12345/test/', busy: async () => busy, dispose() {} });
@@ -33,7 +40,7 @@ test('GitHub 不可用时给出可读错误', async () => {
 
 test('每次插件启动都会检查；发现新版后由用户确认入口安装', async t => {
   let checks = 0, installed;
-  const plugin = await startPlugin({ engine: engine(false), fetcher: async () => { checks++; return Response.json(release('0.2.0')); },
+  const plugin = await startPlugin({ directory: sandbox, download: async () => {}, engine: engine(false), fetcher: async () => { checks++; return Response.json(release('0.2.0')); },
     install: async url => { installed = url; return { changed: true, application: 'restart-required' }; } });
   t.after(() => plugin.dispose());
   await plugin.check();
@@ -44,14 +51,14 @@ test('每次插件启动都会检查；发现新版后由用户确认入口安�
   assert.equal(unauthorized.status, 404);
   const response = await fetch(plugin.url + 'update', { method: 'POST' });
   assert.equal(response.status, 200);
-  assert.equal(installed, release('0.2.0').assets[0].browser_download_url);
+  assert.match(installed, /dsh-chromatogram-catalog-0\.2\.0-[a-f0-9]+\.tgz$/);
   assert.match((await response.json()).message, /重启 DSH/);
   await plugin.check();
   assert.equal(checks, 2);
 });
 
 test('网络失败不阻止打开本地工作台', async t => {
-  const plugin = await startPlugin({ engine: engine(false), fetcher: async () => { throw new Error('离线'); }, install: async () => { throw new Error('不应安装'); } });
+  const plugin = await startPlugin({ directory: sandbox, download: async () => {}, engine: engine(false), fetcher: async () => { throw new Error('离线'); }, install: async () => { throw new Error('不应安装'); } });
   t.after(() => plugin.dispose());
   await plugin.check();
   assert.equal(plugin.state.available, null);
@@ -64,7 +71,7 @@ test('网络失败不阻止打开本地工作台', async t => {
 test('忙碌任务与安装失败均不会报告更新成功', async t => {
   for (const busy of [true, false]) {
     let called = false;
-    const plugin = await startPlugin({ engine: engine(busy), fetcher: async () => Response.json(release('0.2.0')),
+    const plugin = await startPlugin({ directory: sandbox, download: async () => {}, engine: engine(busy), fetcher: async () => Response.json(release('0.2.0')),
       install: async () => { called = true; return { changed: false, application: 'failed', error: { message: '下载失败' } }; } });
     t.after(() => plugin.dispose());
     await plugin.check();
@@ -85,4 +92,26 @@ test('组件启动失败显示原因，下一次可重试', async () => {
   assert.match(runtime.phase, /启动失败.*连接中断/);
   assert.equal(await runtime.ensure(), 'http://127.0.0.1/test/');
   assert.equal(tries, 2);
+});
+
+test('真实下载器支持流式大文件，并拒绝不完整或被修改的文件', async t => {
+  const content = Buffer.alloc(9 * 1024 * 1024, 7);
+  const server = createServer((request, response) => {
+    const range = /^bytes=(\d+)-(\d+)$/.exec(request.headers.range || '');
+    if (!range) return response.end(content);
+    const start = Number(range[1]), end = Math.min(Number(range[2]), content.length - 1);
+    response.writeHead(206, { 'Content-Range': `bytes ${start}-${end}/${content.length}` });
+    response.end(content.subarray(start, end + 1));
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const directory = await mkdtemp(join(tmpdir(), 'catalog-download-'));
+  t.after(async () => { server.close(); server.closeAllConnections(); await rm(directory, { recursive: true, force: true }); });
+  const asset = { browser_download_url: `http://127.0.0.1:${server.address().port}/engine.zip`, size: content.length,
+    digest: `sha256:${createHash('sha256').update(content).digest('hex')}` };
+  const target = join(directory, 'ok.zip');
+  await downloadAsset(asset, target);
+  assert.equal((await stat(target)).size, content.length);
+  await assert.rejects(downloadAsset(asset, target), /EEXIST/);
+  await assert.rejects(downloadAsset({ ...asset, size: content.length + 1 }, join(directory, 'short.zip')), /不完整/);
+  await assert.rejects(downloadAsset({ ...asset, digest: 'sha256:wrong' }, join(directory, 'modified.zip')), /摘要不一致/);
 });
