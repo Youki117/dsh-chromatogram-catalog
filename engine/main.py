@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 STATIC = Path(__file__).resolve().parent / "static"
-METHODS = frozenset("recent_jobs delete_job close_job new_job open_job pick_pdfs add_paths merge_files reorder_files remove_file state pages preview set_keep set_scope set_settings set_medium set_group_medium catalog set_entry_name set_page_fields edit_entry copy_entry add_entry move_entry reorder_entries remove_entry export_check export open_path rules_text import_template reload_rules edits import_rules".split())
+METHODS = frozenset("recent_jobs delete_job close_job new_job open_job pick_pdfs add_paths merge_files reorder_files remove_file state update_status pages preview set_keep set_scope set_settings set_medium set_group_medium catalog set_entry_name set_page_fields edit_entry copy_entry add_entry move_entry reorder_entries remove_entry export_check export open_path rules_text import_template reload_rules edits import_rules".split())
 SHIM = """<script>
 window.pywebview = {api: new Proxy({}, {get: (_, name) => async (...args) => {
   const response = await fetch('api/' + name, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(args)});

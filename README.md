@@ -53,3 +53,13 @@ https://raw.githubusercontent.com/Youki117/dsh-chromatogram-catalog/main/market/
 每个正式 Release 包含版本化插件 tgz、固定名称 `dsh-chromatogram-catalog.tgz` 和 `catalog-engine-win32-x64-<engineVersion>.zip`。后续如仅修改插件界面或更新逻辑，可保留 `engineVersion`，复用之前发布的识别组件。
 
 发布时同步更新 `market/index.json` 的版本、发布时间及源代码提交号，应用内市场才会显示新版本。该索引是自建市场源，尚未收录到 DSH 默认市场。
+
+## 本地独立版更新通道
+
+本地独立版使用同一仓库的 `desktop-latest` Release，更新包名为 `catalog-desktop-update-年.月.日.修订.zip`。该 Release 发布时设置 `--latest=false`，DSH 插件继续检查自己的最新正式版本。
+
+本地版每次启动在后台检查；有新版后在顶栏下显示提示与说明，用户关闭任务并确认后自动下载安装，重启生效。安装保留本机规则文件、Word 模板及任务，旧程序目录保留用于回退。网络错误不阻止使用现有版本。国内下载源尚未配置。
+
+`scripts/build_desktop.py --source <桌面版src> --sanitized <脱敏版src> --compiler <Python3.11> --version 2026.10.30.1` 生成可分发的小更新包。后续发布在该 Release 上传新版本文件并更新说明，程序按文件名中的日期版本选择最新包。只有兼容现有 Python 3.11 运行库的业务代码更新才能走此通道；变更运行库需另发完整程序。
+
+已有旧版本需要先安装一次带在线更新功能的程序；旧版不会自行获得本功能。为本机安装这次升级时，已保留现有规则和模板。其他旧版本首次手动导入前，应备份自己的规则文件和模板，因为旧版的导入行为可能覆盖它们。

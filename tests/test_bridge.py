@@ -19,6 +19,9 @@ class Api:
     def state(self):
         return {"job": None, "message": "中文任务"}
 
+    def update_status(self):
+        return {"enabled": False}
+
 
 class BridgeTest(unittest.TestCase):
     def setUp(self):
@@ -43,6 +46,9 @@ class BridgeTest(unittest.TestCase):
         request = urllib.request.Request(self.url + "test-token/api/state", data=b"[]", headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(request) as response:
             self.assertEqual(json.load(response)["message"], "中文任务")
+        request = urllib.request.Request(self.url + "test-token/api/update_status", data=b"[]", headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(json.load(response)["enabled"], False)
 
     def test_rejects_unknown_token_method_and_invalid_arguments(self):
         for route, body, expected in [("bad/api/state", [], 404), ("test-token/api/_release", [], 404),
